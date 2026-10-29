@@ -90,6 +90,94 @@ function sfx(kind) {
     } catch (e) {}
 }
 
+// ---------- Musica (synthwave procedural, 128 BPM, Am F C G) ----------
+const BPM = 128, STEP = 60 / BPM / 4;                       // duracion de una semicorchea
+const CHORDS = [[57, 60, 64], [53, 57, 60], [48, 52, 55], [55, 59, 62]];
+const BASS = [33, 29, 36, 31];
+const MUSIC_VOL = 0.5;
+const music = { on: false, step: 0, next: 0, timer: null, gain: null };
+let noiseBuf;
+const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
+
+function mOsc(t, freq, dur, type, vol, cutoff) {
+    const o = actx.createOscillator(), g = actx.createGain(), f = actx.createBiquadFilter();
+    o.type = type; o.frequency.value = freq;
+    f.type = 'lowpass'; f.frequency.value = cutoff;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(f); f.connect(g); g.connect(music.gain);
+    o.start(t); o.stop(t + dur + 0.02);
+}
+function mNoise(t, dur, vol, hp) {
+    if (!noiseBuf) {
+        noiseBuf = actx.createBuffer(1, actx.sampleRate, actx.sampleRate);
+        const d = noiseBuf.getChannelData(0);
+        for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    }
+    const s = actx.createBufferSource(), f = actx.createBiquadFilter(), g = actx.createGain();
+    s.buffer = noiseBuf; f.type = 'highpass'; f.frequency.value = hp;
+    g.gain.setValueAtTime(vol, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    s.connect(f); f.connect(g); g.connect(music.gain);
+    s.start(t); s.stop(t + dur);
+}
+function mKick(t) {
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.frequency.setValueAtTime(150, t);
+    o.frequency.exponentialRampToValueAtTime(45, t + 0.12);
+    g.gain.setValueAtTime(0.9, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
+    o.connect(g); g.connect(music.gain);
+    o.start(t); o.stop(t + 0.25);
+}
+function musicStep(s, t) {
+    const lvl = S && S.wave >= 4 ? 3 : S && S.wave >= 2 ? 2 : 1;   // mas capas conforme suben las olas
+    const c = Math.floor(s / 16) % 4;
+    if (s % 4 === 0) mKick(t);
+    if (s % 4 === 2) mNoise(t, 0.05, 0.10, 7000);
+    if (lvl >= 3 && s % 8 === 4) { mNoise(t, 0.16, 0.22, 1800); mOsc(t, 190, 0.1, 'triangle', 0.15, 1500); }
+    if (s % 2 === 0) mOsc(t, mtof(BASS[c] + (lvl >= 2 && s % 8 === 6 ? 12 : 0)), STEP * 1.8, 'sawtooth', 0.2, 700);
+    if (lvl >= 2) mOsc(t, mtof(CHORDS[c][[0, 1, 2, 1][s % 4]] + 12), STEP * 0.9, 'square', 0.05, 2600);
+    if (lvl >= 3 && s % 16 === 0) CHORDS[c].forEach(n => mOsc(t, mtof(n), STEP * 15, 'sawtooth', 0.035, 900));
+}
+function musicTick() {
+    if (!actx || !music.on) return;
+    if (music.next < actx.currentTime - 0.3) music.next = actx.currentTime + 0.05;   // la pestana estuvo en segundo plano
+    while (music.next < actx.currentTime + 0.15) {
+        musicStep(music.step, music.next);
+        music.next += STEP;
+        music.step = (music.step + 1) % 64;
+    }
+}
+function musicStart() {
+    try {
+        actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+        if (actx.state === 'suspended') actx.resume();
+        if (music.on) return;
+        music.on = true; music.step = 0; music.next = actx.currentTime + 0.05;
+        music.gain = actx.createGain();
+        music.gain.gain.value = muted ? 0 : MUSIC_VOL;
+        music.gain.connect(actx.destination);
+        music.timer = setInterval(musicTick, 25);
+    } catch (e) { music.on = false; }
+}
+function musicStop() {
+    if (!music.on) return;
+    music.on = false; clearInterval(music.timer);
+    const g = music.gain;
+    g.gain.setTargetAtTime(0, actx.currentTime, 0.15);
+    setTimeout(() => g.disconnect(), 1200);
+}
+function toggleMute() {
+    muted = !muted;
+    if (music.on) music.gain.gain.setTargetAtTime(muted ? 0 : MUSIC_VOL, actx.currentTime, 0.05);
+}
+document.addEventListener('visibilitychange', () => {
+    if (!actx) return;
+    if (document.hidden) actx.suspend(); else actx.resume();
+});
+
 // ---------- Utilidades ----------
 function txt(x, y, str, size, color, fixed) {
     const t = sc.add.text(x, y, str, { fontFamily: FONT, fontStyle: 'bold', fontSize: size + 'px', color: color || '#ffffff', align: 'center' });
@@ -192,6 +280,7 @@ function startGame() {
     started = true;
     menuObjs.forEach(o => o.destroy()); menuObjs = [];
     S.state = 'play';
+    musicStart();
     startWave(1);
 }
 
@@ -311,6 +400,7 @@ function tryDash() {
 
 function gameOver() {
     S.state = 'over'; S.overAt = sc.time.now;
+    musicStop();
     sfx('over');
     burst(player.x, player.y, 0x00e5ff, 60);
     player.setVisible(false);
@@ -362,7 +452,7 @@ function drawHud() {
 
 // ---------- update ----------
 function update(time, delta) {
-    if (Phaser.Input.Keyboard.JustDown(keys.M)) muted = !muted;
+    if (Phaser.Input.Keyboard.JustDown(keys.M)) toggleMute();
 
     if (S.state === 'menu') {
         if (Phaser.Input.Keyboard.JustDown(keys.SPACE)) startGame();

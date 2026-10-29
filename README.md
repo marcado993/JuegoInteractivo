@@ -1,6 +1,6 @@
 # NEON SWARM
 
-Juego de supervivencia arcade hecho con **Phaser 3** (Arcade Physics). Sin assets externos: todos los gráficos y sonidos se generan por código.
+Juego de supervivencia arcade hecho con **Phaser 3** (Arcade Physics). Sin assets externos: gráficos, efectos y música (synthwave a 128 BPM que gana capas con cada ola) se generan por código.
 
 **Jugar:** https://marcado993.github.io/JuegoInteractivo/
 
@@ -11,7 +11,7 @@ Juego de supervivencia arcade hecho con **Phaser 3** (Arcade Physics). Sin asset
 | Mover | Flechas / WASD | Arrastrar |
 | Dash (invulnerable) | Espacio | Botón DASH |
 | Disparo | Automático al enemigo más cercano | Automático |
-| Silenciar | M | - |
+| Silenciar música y efectos | M | - |
 
 ## Cómo se juega
 
