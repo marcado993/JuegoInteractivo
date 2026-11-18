@@ -21,8 +21,41 @@ const UPG = [
     { key: 'magnet', name: 'Imán de monedas', desc: 'Atrae monedas desde más lejos', max: 4, cost: [40, 90, 160, 260] }
 ];
 
+// ---------- Lore (la biblia completa esta en LORE.md) ----------
+const WORLDS = [
+    { name: 'Baseplate Alfa', boss: 'Rey Ladrillo 1.0' },
+    { name: 'Nebulosa Lag', boss: 'Rey Ladrillo 2.0 Turbo' },
+    { name: 'Cinturón 404', boss: 'Emperador 404' },
+    { name: 'Servidor Caído', boss: 'El Glitch Original' },
+    { name: 'El Núcleo', boss: 'Rey Ladrillo Supremo v∞' }
+];
+const worldOf = n => WORLDS[Math.min(WORLDS.length - 1, Math.floor((n - 1) / 5))];
+const STORY = 'La Baseplate Galáctica era un universo perfecto, construido ladrillo a ladrillo por el Maestro Brick.\n\n' +
+    'Un viernes a las 5:59 de la tarde, el Maestro pulsó DEPLOY sin probar nada. «Funciona en mi computadora», dijo.\n\n' +
+    'Así nació el Glitch: un error que corrompe cada ladrillo y le pinta una cara de enojado. El Maestro quedó atrapado en la infección y se transformó en el Rey Ladrillo. La Academia de Pilotos Debug cayó y los veteranos se rindieron: querían ganar a la primera.\n\n' +
+    'Solo queda un alumno en el hangar: el Noob, el peor de su promoción. Tiene una nave de ladrillos y una idea simple: fallar, aprender, mejorar y volver a intentarlo.';
+const CAST = [
+    { img: 'head', name: 'EL NOOB', color: '#ffd54a', text: 'Piloto novato, optimista y torpe. Cada vez que cae suelta su grito de guerra, ¡OOF!, y vuelve a intentarlo.' },
+    { img: 'capitana', name: 'CAPITANA COMPILA', color: '#4fc3f7', text: 'Holograma-mentora de la Academia. «Un OOF es un test que falló. Corrige y vuelve a correr.»' },
+    { img: 'coin', name: 'LA FÁBRICA AUTOMÁTICA', color: '#7bed9f', text: 'La última máquina de la Academia: convierte monedas en mejoras y naves. Es la tienda (tecla E).' }
+];
+const FOES = [
+    { key: 'e_chaser', name: 'Bug Menor', color: '#ff6f60', text: 'Un error pequeño que nadie corrigió. Te persigue a todas partes.', real: 'En software: un defecto menor que se ignora hasta que se multiplica.' },
+    { key: 'e_runner', name: 'Condición de Carrera', color: '#ce6bff', text: 'Dos procesos compiten por llegar primero. Llega antes de que pienses.', real: 'En software: un fallo que depende de quién llega antes.' },
+    { key: 'e_gunner', name: 'Spam', color: '#26c6b0', text: 'Mensajes que nadie pidió. Te dispara desde lejos sin parar.', real: 'En software: notificaciones y correos no deseados.' },
+    { key: 'e_tank', name: 'Deuda Técnica', color: '#ffa726', text: 'Los atajos de ayer. Parece lento, pero cada vez pesa más.', real: 'En software: el atajo de hoy se paga con intereses mañana.' }
+];
+const QUIPS = [
+    '«Un OOF es un test que falló. Corrige y vuelve a correr.»',
+    '«Nadie gana a la primera. Gana quien vuelve a intentarlo.»',
+    '«Los bugs se multiplican si los ignoras.»',
+    '«Mejora tu nave en la Fábrica y ejecuta de nuevo.»',
+    '«"Funciona en mi computadora" no es una estrategia.»'
+];
+let codexObjs = [], codexPageObjs = [], codexOnClose = null, codexTitle, codexPageText, codexNext;
+
 // ---------- Progreso guardado ----------
-let save = { coins: 0, bestWave: 0, dmg: 0, rate: 0, hp: 0, speed: 0, magnet: 0, ship: 0, owned: [true, false, false, false, false, false] };
+let save = { coins: 0, bestWave: 0, dmg: 0, rate: 0, hp: 0, speed: 0, magnet: 0, ship: 0, owned: [true, false, false, false, false, false], seenIntro: false };
 try { const s = JSON.parse(localStorage.getItem('noobswarm_save') || 'null'); if (s) save = Object.assign(save, s); } catch (e) {}
 function persist() { try { localStorage.setItem('noobswarm_save', JSON.stringify(save)); } catch (e) {} }
 
@@ -123,6 +156,13 @@ function preload() {
     tex(this, 'head', 16, 16, g => {
         g.fillStyle(0xf5cd30); g.fillRect(0, 0, 16, 16); g.lineStyle(2, 0x111111, 0.85); g.strokeRect(1, 1, 14, 14);
         g.fillStyle(0x222222); g.fillRect(4, 5, 2, 3); g.fillRect(10, 5, 2, 3); g.fillRect(4, 11, 8, 1);
+    });
+    tex(this, 'capitana', 16, 16, g => {                                                    // holograma de la Capitana Compila
+        g.fillStyle(0x4fc3f7, 0.9); g.fillRect(0, 0, 16, 16);
+        g.fillStyle(0xb3e5fc, 0.5); for (let y = 1; y < 16; y += 4) g.fillRect(0, y, 16, 1);
+        g.fillStyle(0xffffff); g.fillRect(2, 5, 5, 4); g.fillRect(9, 5, 5, 4);
+        g.fillStyle(0x111111); g.fillRect(4, 6, 2, 2); g.fillRect(11, 6, 2, 2); g.fillRect(5, 12, 6, 1);
+        g.lineStyle(2, 0x111111, 0.85); g.strokeRect(1, 1, 14, 14);
     });
     tex(this, 'spark', 6, 6, g => { g.fillStyle(0xffffff); g.fillRect(0, 0, 6, 6); });
     tex(this, 'grid', 64, 64, g => {
@@ -291,10 +331,11 @@ function create() {
     sc = this;
     planets = []; shopObjs = []; shopRows = []; shipBoxes = []; menuObjs = []; overObjs = [];
     hud = {}; dashBtn = null;                       // se recrean en cada escena (al reaparecer la escena se reinicia)
+    codexObjs = []; codexPageObjs = []; codexOnClose = null;
     S = {
         state: started ? 'play' : 'menu', hp: maxHpOf(), wave: 0, toSpawn: 0, spawnT: 0, waitNext: false, combo: 0, comboT: 0,
         kills: 0, runCoins: 0, fireT: 0, dashT: 0, dashCd: 0, invuln: 0, face: new Phaser.Math.Vector2(1, 0), dashVec: new Phaser.Math.Vector2(),
-        shopOpen: false, boss: null, overAt: 0, dirtyAt: 0, theme: 0
+        shopOpen: false, codexOpen: false, codexPage: 0, codexClosedAt: -1e9, btnTap: false, boss: null, overAt: 0, dirtyAt: 0, theme: 0
     };
 
     sc.physics.world.setBounds(0, 0, WORLD_W, WORLD_H);
@@ -317,7 +358,7 @@ function create() {
     sc.cameras.main.setBounds(0, 0, WORLD_W, WORLD_H);
     sc.cameras.main.startFollow(player, true, 0.1, 0.1);
     cursors = sc.input.keyboard.createCursorKeys();
-    keys = sc.input.keyboard.addKeys('W,A,S,D,SPACE,E,M,ESC,ONE,TWO,THREE,FOUR,FIVE');
+    keys = sc.input.keyboard.addKeys('W,A,S,D,SPACE,E,H,M,ESC,ONE,TWO,THREE,FOUR,FIVE');
 
     enemies = sc.physics.add.group();
     bullets = sc.physics.add.group();
@@ -365,7 +406,8 @@ function buildHud() {
     hud.coins = T(50, 90, '0', 24, '#ffd54a');
     hud.hp = T(130, 55, '', 18, '#ffffff', 0.5, 0);
     hud.combo = T(VIEW_W - 16, 112, '', 22, '#7bed9f', 1, 0);
-    hud.hint = T(16, VIEW_H - 36, 'E: tienda', 22, '#ffffff').setAlpha(0.85);
+    hud.hint = T(16, VIEW_H - 36, 'E: fábrica · H: historia', 20, '#ffffff').setAlpha(0.85);
+    hud.bossName = T(VIEW_W / 2, 26, '', 20, '#ff8a80', 0.5, 0);
     hud.all = sc.children.list.slice(before);
     hud.all.forEach(o => o.setVisible(false));
 }
@@ -397,6 +439,7 @@ function drawHud() {
         g.fillStyle(0xff5252); g.fillRoundedRect(bx, by, Math.max(8, bw * f), 16, 6);
         g.lineStyle(2, 0xffffff, 0.6); g.strokeRoundedRect(bx, by, bw, 16, 6);
     }
+    hud.bossName.setText(S.boss && S.boss.active ? S.boss.bossName : '');
     hud.wave.setText('MUNDO ' + Math.max(1, Math.ceil(S.wave / 5)) + ' · OLA ' + S.wave);
     hud.hp.setText(Math.max(0, Math.ceil(S.hp)) + ' / ' + maxHpOf());
     hud.coins.setText(String(save.coins));
@@ -427,7 +470,7 @@ function buildShop() {
     g.fillStyle(0x2b2f3a); g.fillRoundedRect(130, 24, 540, 552, 18);
     g.lineStyle(4, 0xffffff, 0.15); g.strokeRoundedRect(130, 24, 540, 552, 18);
     const tx = (x, y, s, size, color, ox) => { const t = T(x, y, s, size, color, ox === undefined ? 0 : ox, 0); sh(t); t.setDepth(202); return t; };
-    tx(150, 34, 'TIENDA', 34, '#ffd54a');
+    tx(150, 34, 'LA FÁBRICA', 34, '#ffd54a');
     shopObjs.coin = tx(612, 40, '', 24, '#ffd54a', 1);
     shopObjs.stats = tx(150, 72, '', 16, '#b0bec5');
     const close = sh(sc.add.text(648, 32, 'X', { fontFamily: FONT, fontStyle: 'bold', fontSize: '30px', color: '#ff6b6b' }).setInteractive({ useHandCursor: true }));
@@ -472,6 +515,7 @@ function refreshShop() {
 }
 
 function toggleShop() {
+    if (S.codexOpen) return;
     S.shopOpen = !S.shopOpen;
     shopObjs.forEach(o => o.setVisible(S.shopOpen));
     if (S.shopOpen) { sc.physics.pause(); refreshShop(); sfx('buy'); }
@@ -505,13 +549,132 @@ function showMenu() {
     const go = T(VIEW_W / 2, 520, 'PRESIONA ESPACIO O TOCA PARA JUGAR', 28, '#ffffff', 0.5, 0.5);
     sc.tweens.add({ targets: go, alpha: 0.25, yoyo: true, repeat: -1, duration: 500 });
     menuObjs = [t, go,
-        T(VIEW_W / 2, 186, 'Sobrevive a la horda de ladrillos', 28, '#ffffff', 0.5, 0.5),
+        T(VIEW_W / 2, 186, 'Defiende la Baseplate Galáctica del Rey Ladrillo', 26, '#ffffff', 0.5, 0.5),
         T(VIEW_W / 2, 240, '← →  ↑ ↓  o  WASD  mover        ESPACIO  dash', 20, '#ffffff', 0.5, 0.5),
-        T(VIEW_W / 2, 268, 'Disparas solo · junta monedas · E tienda · M silencio', 20, '#ffffff', 0.5, 0.5),
+        T(VIEW_W / 2, 268, 'Disparas solo · junta monedas · E fábrica · M silencio', 20, '#ffffff', 0.5, 0.5),
         T(VIEW_W / 2, 330, save.bestWave ? 'MEJOR: OLA ' + save.bestWave : '', 26, '#ffb347', 0.5, 0.5),
-        T(VIEW_W / 2, 380, save.coins ? save.coins + ' monedas · pulsa E para la tienda' : '', 20, '#ffd54a', 0.5, 0.5)
+        T(VIEW_W / 2, 380, save.coins ? save.coins + ' monedas · pulsa E para la fábrica' : '', 20, '#ffd54a', 0.5, 0.5)
     ];
-    sc.input.once('pointerdown', () => { if (S.state === 'menu') startGame(); });
+    const lore = T(VIEW_W - 16, VIEW_H - 40, 'H: historia y personajes', 22, '#ffd54a', 1, 0).setInteractive({ useHandCursor: true });
+    lore.on('pointerdown', () => { S.btnTap = true; openCodex(0); });
+    menuObjs.push(lore);
+    S.menuTap = () => {
+        if (S.state !== 'menu' || S.codexOpen) return;
+        if (S.btnTap) { S.btnTap = false; return; }
+        begin();
+    };
+    sc.input.on('pointerdown', S.menuTap);
+}
+
+// Primera vez: se muestra la historia completa; despues se salta directo a jugar (H la abre cuando quieras)
+function begin() {
+    if (S.state !== 'menu') return;
+    menuObjs.forEach(o => o.destroy()); menuObjs = [];
+    if (S.menuTap) sc.input.off('pointerdown', S.menuTap);
+    if (save.seenIntro) startGame();
+    else openCodex(0, () => { save.seenIntro = true; persist(); startGame(); });
+}
+
+// ---------- Visor de historia (lore) ----------
+function codexText(x, y, str, size, color, ox, wrap) {
+    const t = T(x, y, str, size, color, ox === undefined ? 0 : ox, 0).setDepth(222).setStroke('#1a1a1a', size >= 22 ? 4 : 2);
+    if (wrap) t.setWordWrapWidth(wrap, true).setLineSpacing(size >= 22 ? 4 : 3);
+    codexPageObjs.push(t);
+    return t;
+}
+function codexImage(x, y, key, size) {
+    const src = sc.textures.get(key).getSourceImage();
+    const im = sc.add.image(x, y, key).setScrollFactor(0).setDepth(222).setScale(size / Math.max(src.width, src.height));
+    codexPageObjs.push(im);
+    return im;
+}
+function codexBox(x, y, w, h) {
+    codexPageObjs.push(sc.add.rectangle(x + w / 2, y + h / 2, w, h, 0x3a4050).setScrollFactor(0).setDepth(221));
+}
+const CODEX_PAGES = [
+    { title: 'EL GRAN DEPLOY DEL VIERNES', draw() { codexText(80, 84, STORY, 20, '#ffffff', 0, 640); } },
+    { title: 'PERSONAJES', draw() {
+        CAST.forEach((c, i) => {
+            const y = 82 + i * 104;
+            codexBox(80, y, 640, 94);
+            codexImage(130, y + 47, c.img, 64);
+            codexText(184, y + 8, c.name, 22, c.color);
+            codexText(184, y + 38, c.text, 16, '#dfe6ee', 0, 520);
+        });
+        codexText(80, 398, 'La Flota Debug: seis naves heredadas de los pilotos que cayeron.', 17, '#b0bec5', 0, 640);
+        SHIPS.forEach((s, i) => { codexImage(130 + i * 108, 462, 'ship' + i, 70); codexText(130 + i * 108, 490, s.name, 13, '#ffffff', 0.5); });
+    } },
+    { title: 'LOS LADRILLOS CORRUPTOS', draw() {
+        FOES.forEach((f, i) => {
+            const x = 70 + (i % 2) * 340, y = 82 + Math.floor(i / 2) * 200;
+            codexBox(x, y, 330, 190);
+            codexImage(x + 56, y + 62, f.key, 72);
+            const nm = codexText(x + 106, y + 14, f.name, 22, f.color, 0, 215);
+            codexText(x + 106, y + 20 + nm.height, f.text, 16, '#dfe6ee', 0, 215);
+            codexText(x + 14, y + 144, f.real, 15, '#9fd8ff', 0, 302);
+        });
+    } },
+    { title: 'LOS CINCO MUNDOS', draw() {
+        WORLDS.forEach((w, i) => {
+            const y = 84 + i * 76;
+            codexBox(80, y, 450, 68);
+            codexText(96, y + 6, (i + 1) + '. ' + w.name, 22, '#ffd54a');
+            codexText(96, y + 38, 'Jefe: ' + w.boss + '  ·  ' + (i < 4 ? 'olas ' + (i * 5 + 1) + ' a ' + (i * 5 + 5) : 'olas 21 en adelante'), 15, '#dfe6ee');
+        });
+        codexImage(640, 200, 'e_boss', 150);
+        codexText(640, 290, 'El Rey Ladrillo:\nel Maestro Brick\ncorrupto por el Glitch', 16, '#ff8a80', 0.5);
+        codexText(80, 474, 'Cada 5 olas el Glitch manda a su rey.', 17, '#b0bec5');
+    } }
+];
+
+function openCodex(page, onClose) {
+    if (S.codexOpen || S.shopOpen) return;
+    S.codexOpen = true; codexOnClose = onClose || null;
+    if (S.state === 'play') sc.physics.pause();
+    const add = (o, d) => { o.setScrollFactor(0).setDepth(d); codexObjs.push(o); return o; };
+    add(sc.add.rectangle(VIEW_W / 2, VIEW_H / 2, VIEW_W, VIEW_H, 0x000000, 0.75).setInteractive(), 220);
+    const g = add(sc.add.graphics(), 221);
+    g.fillStyle(0x2b2f3a); g.fillRoundedRect(50, 20, 700, 560, 18);
+    g.lineStyle(4, 0xffffff, 0.15); g.strokeRoundedRect(50, 20, 700, 560, 18);
+    codexTitle = add(T(400, 32, '', 30, '#ffd54a', 0.5, 0), 222);
+    codexPageText = add(T(400, 548, '', 18, '#b0bec5', 0.5, 0), 222);
+    const btn = (x, y, label, ox, fn) => {
+        const b = add(T(x, y, label, 22, '#ffffff', ox, 0), 222).setInteractive({ useHandCursor: true });
+        b.on('pointerdown', () => { S.btnTap = true; fn(); });
+        return b;
+    };
+    btn(80, 544, '< ANTERIOR', 0, () => codexGo(-1));
+    codexNext = btn(720, 544, 'SIGUIENTE >', 1, () => codexGo(1, true));
+    btn(724, 28, 'X', 0.5, closeCodex).setColor('#ff6b6b');
+    showCodexPage(page);
+}
+
+function showCodexPage(i) {
+    codexPageObjs.forEach(o => o.destroy()); codexPageObjs = [];
+    S.codexPage = Phaser.Math.Clamp(i, 0, CODEX_PAGES.length - 1);
+    const p = CODEX_PAGES[S.codexPage];
+    codexTitle.setText(p.title);
+    p.draw();
+    codexPageText.setText((S.codexPage + 1) + ' / ' + CODEX_PAGES.length);
+    codexNext.setText(S.codexPage === CODEX_PAGES.length - 1 ? (codexOnClose ? 'JUGAR >' : 'CERRAR >') : 'SIGUIENTE >');
+}
+
+function codexGo(dir, closeAtEnd) {
+    const n = S.codexPage + dir;
+    if (n >= CODEX_PAGES.length) { if (closeAtEnd) closeCodex(); return; }
+    if (n < 0) return;
+    sfx('buy');
+    showCodexPage(n);
+}
+
+function closeCodex() {
+    if (!S.codexOpen) return;
+    S.codexOpen = false; S.codexClosedAt = sc.time.now;
+    codexObjs.forEach(o => o.destroy()); codexPageObjs.forEach(o => o.destroy());
+    codexObjs = []; codexPageObjs = [];
+    if (S.state === 'play') sc.physics.resume();
+    const cb = codexOnClose; codexOnClose = null;
+    if (cb) cb();
 }
 
 function startGame() {
@@ -545,12 +708,14 @@ function startWave(n) {
     const boss = n % 5 === 0;
     S.toSpawn = boss ? 6 + n * 2 : 8 + n * 5;
     setWorld(Math.floor((n - 1) / 5));
+    const w = worldOf(n);
     if (boss) {
-        banner('¡JEFE!', 'Ola ' + n + ' · derrota al Rey Ladrillo', '#ff5252');
+        banner('¡JEFE!', w.boss, '#ff5252');
         sfx('boss');
         spawnBoss();
     } else {
-        banner('OLA ' + n, n === 1 ? 'Dispara solo: tú esquiva' : 'Mundo ' + Math.ceil(n / 5), '#ffd54a');
+        const firstOfWorld = (n - 1) % 5 === 0;
+        banner('OLA ' + n, firstOfWorld ? 'Mundo ' + Math.ceil(n / 5) + ': ' + w.name : 'Mundo ' + Math.ceil(n / 5) + ' · ' + w.name, '#ffd54a');
         sfx('wave');
     }
 }
@@ -589,7 +754,7 @@ function spawnBoss() {
     const e = enemies.create(p.x, p.y, 'e_boss').setDepth(8);
     e.body.setCircle(58, e.width / 2 - 58, e.height / 2 - 58);
     e.body.setImmovable(true);
-    e.type = 'boss'; e.hp = e.maxHp = 40 + S.wave * 6;
+    e.type = 'boss'; e.hp = e.maxHp = 40 + S.wave * 6; e.bossName = worldOf(S.wave).boss;
     e.speed = 55 + S.wave * 2; e.dmg = 30; e.coins = 15; e.color = 0xd32f2f;
     e.stun = 0; e.spawnT = sc.time.now + 1200; e.nextRad = sc.time.now + 2200; e.nextAim = sc.time.now + 1600; e.rot = 0;
     e.setAlpha(0);
@@ -635,7 +800,7 @@ function killEnemy(e) {
     if (boss) {
         for (let i = 0; i < 14; i++) dropCoin(e.x, e.y, 15 + S.wave);
         S.boss = null;
-        banner('¡JEFE DERROTADO!', '+monedas por todos lados', '#39d353');
+        banner('¡JEFE DERROTADO!', e.bossName + ' cae... por ahora', '#39d353');
         sfx('win');
     } else {
         dropCoin(e.x, e.y, e.coins * coinMult());
@@ -733,9 +898,11 @@ function gameOver() {
         T(VIEW_W / 2, 250, 'Llegaste a la OLA ' + S.wave, 32, '#ffd54a', 0.5, 0.5).setDepth(150),
         T(VIEW_W / 2, 296, '+' + S.runCoins + ' monedas · ' + S.kills + ' ladrillos destruidos', 20, '#ffffff', 0.5, 0.5).setDepth(150),
         T(VIEW_W / 2, 336, newBest ? '¡NUEVO RÉCORD!' : 'Récord: ola ' + save.bestWave, 24, newBest ? '#7bed9f' : '#b0bec5', 0.5, 0.5).setDepth(150),
-        T(VIEW_W / 2, 384, 'Tienes ' + save.coins + ' monedas: compra mejoras con E', 20, '#ffd54a', 0.5, 0.5).setDepth(150)
+        T(VIEW_W / 2, 376, 'Tienes ' + save.coins + ' monedas: mejora tu nave en la Fábrica (E)', 20, '#ffd54a', 0.5, 0.5).setDepth(150),
+        T(VIEW_W / 2, 424, QUIPS[rnd(0, QUIPS.length - 1)], 20, '#9fd8ff', 0.5, 0.5).setDepth(150).setWordWrapWidth(640, true).setAlign('center'),
+        T(VIEW_W / 2, 452, '— Capitana Compila', 16, '#4fc3f7', 0.5, 0.5).setDepth(150)
     ];
-    const again = T(VIEW_W / 2, 470, 'ESPACIO O TOCA PARA REAPARECER', 26, '#ffffff', 0.5, 0.5).setDepth(150);
+    const again = T(VIEW_W / 2, 510, 'ESPACIO O TOCA PARA REAPARECER', 26, '#ffffff', 0.5, 0.5).setDepth(150);
     sc.tweens.add({ targets: again, alpha: 0.25, yoyo: true, repeat: -1, duration: 500 });
     overObjs.push(again);
 }
@@ -752,6 +919,14 @@ function update(time, delta) {
         player.setTint(Phaser.Display.Color.GetColor(rgb.r, rgb.g, rgb.b));
     } else player.clearTint();
 
+    if (S.codexOpen) {                                       // visor de historia (lore)
+        if (J(cursors.left) || J(keys.A)) codexGo(-1);
+        if (J(cursors.right) || J(keys.D)) codexGo(1);
+        if (J(keys.SPACE)) codexGo(1, true);
+        if (J(keys.ESC) || J(keys.H)) closeCodex();
+        return;
+    }
+    if (!S.shopOpen && J(keys.H)) { openCodex(0); return; }
     if (J(keys.E) || (S.shopOpen && J(keys.ESC))) toggleShop();
     if (S.shopOpen) {
         [keys.ONE, keys.TWO, keys.THREE, keys.FOUR, keys.FIVE].forEach((k, i) => { if (J(k)) buy(UPG[i].key); });
@@ -760,11 +935,11 @@ function update(time, delta) {
     if (S.state === 'menu') {
         player.setVelocity(0, 0);
         player.y = WORLD_H / 2 + Math.sin(time / 400) * 8;
-        if (J(keys.SPACE)) startGame();
+        if (J(keys.SPACE)) begin();
         return;
     }
     if (S.state === 'over') {
-        if (time - S.overAt > 700 && (J(keys.SPACE) || sc.input.activePointer.isDown)) sc.scene.restart();
+        if (time - S.overAt > 700 && time - S.codexClosedAt > 500 && (J(keys.SPACE) || sc.input.activePointer.isDown)) sc.scene.restart();
         return;
     }
 

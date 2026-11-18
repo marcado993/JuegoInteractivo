@@ -2,17 +2,354 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Mi Juego Phaser - ISWD823</title>
-    <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>NOOB SWARM · Defiende la Baseplate Galáctica</title>
+    <meta name="description" content="Un piloto noob, una nave de ladrillos y un enjambre de bugs. Juega gratis en tu navegador, sin instalar nada.">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="NOOB SWARM">
+    <meta property="og:description" content="Un piloto noob debe frenar al enjambre de Ladrillos Corruptos antes de que el Rey Ladrillo convierta la galaxia en un error 404.">
+    <meta property="og:image" content="https://marcado993.github.io/JuegoInteractivo/imagenes/partida.png">
+    <meta name="theme-color" content="#0b1030">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;700&display=swap">
     <style>
-        html, body { height: 100%; }
-        body { margin: 0; display: flex; justify-content: center; align-items: center; background: #2d2d2d; overflow: hidden; touch-action: none; }
-        #game { width: 100vw; height: 100vh; }
+        :root {
+            --noche: #0b1030;
+            --panel: #161d4a;
+            --panel-claro: #232d6e;
+            --borde: #070a22;
+            --amarillo: #ffd54a;
+            --amarillo-oscuro: #b8860b;
+            --cian: #4fc3f7;
+            --rojo: #ff5252;
+            --verde: #39d353;
+            --texto: #eef2ff;
+            --suave: #b7c3f0;
+        }
+        * { box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body {
+            margin: 0;
+            font-family: "Fredoka", "Trebuchet MS", Verdana, sans-serif;
+            font-size: 1.1rem;
+            line-height: 1.55;
+            color: var(--texto);
+            background:
+                radial-gradient(2px 2px at 20px 30px, #ffffff, transparent),
+                radial-gradient(2px 2px at 120px 90px, #ffffffaa, transparent),
+                radial-gradient(3px 3px at 200px 40px, #ffe08a, transparent),
+                radial-gradient(2px 2px at 60px 150px, #9fd8ff, transparent),
+                radial-gradient(2px 2px at 170px 170px, #ffffff88, transparent),
+                var(--noche);
+            background-size: 240px 200px;
+        }
+        a { color: var(--cian); }
+        img { max-width: 100%; height: auto; display: block; }
+        .contenedor { width: min(1080px, 100% - 2rem); margin-inline: auto; }
+        .saltar { position: absolute; left: -999px; top: 0; background: var(--amarillo); color: #2a1f00; padding: .5rem 1rem; z-index: 10; }
+        .saltar:focus { left: 0; }
+
+        /* ---------- navegacion ---------- */
+        .menu { position: sticky; top: 0; z-index: 5; background: #0b1030ee; border-bottom: 3px solid var(--borde); backdrop-filter: blur(4px); }
+        .menu .contenedor { display: flex; flex-wrap: wrap; gap: .25rem 1.25rem; align-items: center; padding-block: .6rem; }
+        .menu strong { color: var(--amarillo); font-size: 1.3rem; letter-spacing: .04em; margin-right: auto; }
+        .menu a { color: var(--texto); text-decoration: none; font-weight: 500; padding: .2rem .1rem; }
+        .menu a:hover, .menu a:focus-visible { color: var(--amarillo); }
+
+        /* ---------- portada ---------- */
+        .portada { padding: clamp(1rem, 3vw, 2.2rem) 0 clamp(2rem, 6vw, 4rem); }
+        .portada .contenedor { display: grid; gap: 2.5rem; grid-template-columns: 1.05fr 1fr; align-items: center; }
+        .etiqueta { display: inline-block; margin: 0 0 .7rem; padding: .25rem .9rem; background: var(--panel); border: 3px solid var(--borde); border-radius: 999px; color: var(--cian); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; font-size: .85rem; }
+        h1 { margin: 0 0 .8rem; font-size: clamp(3.4rem, 9.5vw, 6rem); line-height: .92; color: var(--amarillo); letter-spacing: .02em; text-shadow: 0 6px 0 var(--amarillo-oscuro), 0 10px 0 var(--borde), 0 14px 30px #000a; }
+        h1 span { color: var(--rojo); text-shadow: 0 6px 0 #a02020, 0 10px 0 var(--borde), 0 14px 30px #000a; }
+        .logline { margin: 0 0 1.6rem; font-size: clamp(1.05rem, 2vw, 1.25rem); color: var(--texto); max-width: 42ch; }
+        .jugar-caja { display: flex; flex-direction: column; align-items: flex-start; gap: 1.2rem; }
+        .jugar {
+            position: relative;
+            display: inline-block;
+            margin-top: 14px;
+            padding: .22em 1.15em;
+            font-size: clamp(2.4rem, 8vw, 4rem);
+            font-weight: 700;
+            letter-spacing: .08em;
+            text-decoration: none;
+            color: #2a1f00;
+            background: var(--amarillo);
+            border: 4px solid #1a1a1a;
+            border-radius: 20px;
+            box-shadow: 0 10px 0 var(--amarillo-oscuro), 0 18px 30px #0008;
+            transition: transform .1s, box-shadow .1s;
+            animation: latido 1.8s ease-in-out infinite;
+        }
+        .jugar::before, .jugar::after {
+            content: "";
+            position: absolute;
+            top: -16px;
+            width: 34px;
+            height: 18px;
+            background: var(--amarillo);
+            border: 4px solid #1a1a1a;
+            border-bottom: 0;
+            border-radius: 10px 10px 0 0;
+        }
+        .jugar::before { left: 22px; }
+        .jugar::after { right: 22px; }
+        .jugar:hover { transform: translateY(-4px); box-shadow: 0 14px 0 var(--amarillo-oscuro), 0 24px 34px #0008; }
+        .jugar:active { transform: translateY(8px); box-shadow: 0 2px 0 var(--amarillo-oscuro); }
+        .jugar:focus-visible { outline: 5px solid var(--cian); outline-offset: 8px; }
+        @keyframes latido { 50% { transform: scale(1.035); } }
+        .nota { margin: 0; color: var(--suave); font-size: .95rem; }
+        .captura { border: 4px solid var(--borde); border-radius: 18px; box-shadow: 0 10px 0 var(--borde), 0 0 60px #4fc3f744; transform: rotate(2deg); }
+
+        /* ---------- secciones ---------- */
+        section { padding-block: clamp(2.5rem, 6vw, 4.5rem); }
+        .etiqueta-seccion { margin: 0 0 .25rem; color: var(--rojo); font-weight: 700; letter-spacing: .12em; text-transform: uppercase; font-size: .9rem; }
+        h2 { margin: 0 0 1.25rem; font-size: clamp(2rem, 5vw, 3rem); line-height: 1.05; color: var(--amarillo); }
+        h3 { margin: 0 0 .35rem; font-size: 1.35rem; color: var(--texto); }
+        .parrafo { max-width: 68ch; }
+        .rejilla { display: grid; gap: 2rem 1.25rem; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); margin-top: 2rem; }
+        .ladrillo {
+            position: relative;
+            margin-top: 10px;
+            padding: 1.2rem 1.2rem 1.3rem;
+            background: var(--panel);
+            border: 3px solid var(--borde);
+            border-radius: 14px;
+            box-shadow: 0 6px 0 var(--borde);
+        }
+        .ladrillo::before {
+            content: "";
+            position: absolute;
+            left: 14px; right: 14px; top: -10px; height: 10px;
+            background: radial-gradient(circle at 11px 10px, var(--panel-claro) 6px, transparent 7px) 0 0 / 30px 10px repeat-x;
+        }
+        .ladrillo p { margin: 0; color: var(--suave); }
+        .ladrillo svg { display: block; margin: 0 0 .75rem; }
+        .cita { margin: 1.5rem 0 0; padding: 1rem 1.25rem; border-left: 6px solid var(--cian); background: #4fc3f714; border-radius: 0 12px 12px 0; font-size: 1.15rem; max-width: 60ch; }
+        .cita cite { display: block; margin-top: .35rem; color: var(--cian); font-size: .95rem; font-style: normal; font-weight: 700; }
+        .galeria { display: grid; gap: 1.25rem; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); margin-top: 2rem; }
+        figure { margin: 0; }
+        figure img { border: 3px solid var(--borde); border-radius: 12px; box-shadow: 0 6px 0 var(--borde); }
+        figcaption { margin-top: .6rem; color: var(--suave); font-size: .95rem; }
+        .fondo-alterno { background: #0a0e2acc; border-block: 3px solid var(--borde); }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 1.25rem; background: var(--panel); border: 3px solid var(--borde); border-radius: 14px; overflow: hidden; }
+        th, td { padding: .7rem 1rem; text-align: left; vertical-align: top; }
+        th { background: var(--panel-claro); color: var(--amarillo); }
+        tr + tr td { border-top: 2px solid var(--borde); }
+        kbd { padding: .1rem .5rem; background: var(--amarillo); color: #2a1f00; border-radius: 6px; border-bottom: 3px solid var(--amarillo-oscuro); font-family: inherit; font-weight: 700; }
+        .tabla-ancha { overflow-x: auto; }
+
+        .real { margin-top: .6rem !important; padding-top: .6rem; border-top: 2px dashed #ffffff30; color: #9fd8ff !important; font-size: .95rem; }
+
+        /* ---------- legal ---------- */
+        .clasificacion { display: flex; flex-wrap: wrap; gap: 1.5rem; align-items: center; }
+        .insignia { flex: none; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 120px; height: 150px; background: #ffffff; color: #111; border: 6px solid #111; border-radius: 10px; box-shadow: 0 8px 0 var(--borde); }
+        .insignia .letra { font-size: 5.5rem; font-weight: 700; line-height: 1; }
+        .insignia small { font-size: .8rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+        .clasificacion p { flex: 1 1 300px; margin: 0; font-size: 1.2rem; }
+        .lista { margin: 1.25rem 0 0; padding-left: 1.2rem; max-width: 72ch; }
+        .lista li { margin-bottom: .5rem; }
+
+        footer { padding: 2rem 0 3rem; border-top: 3px solid var(--borde); color: var(--suave); text-align: center; font-size: .95rem; }
+        footer p { margin: .3rem 0; }
+
+        @media (max-width: 800px) {
+            .portada .contenedor { grid-template-columns: 1fr; }
+            .captura { transform: none; }
+            .menu a.opcional { display: none; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            html { scroll-behavior: auto; }
+            .jugar { animation: none; transition: none; }
+        }
     </style>
 </head>
 <body>
-    <div id="game"></div>
-    <script src="game.js"></script>
+    <a class="saltar" href="#historia">Saltar al contenido</a>
+
+    <nav class="menu" aria-label="Secciones">
+        <div class="contenedor">
+            <strong>NOOB SWARM</strong>
+            <a href="#historia">Historia</a>
+            <a href="#caracteristicas">Características</a>
+            <a class="opcional" href="#como-jugar">Cómo jugar</a>
+            <a class="opcional" href="#enemigos">Enemigos</a>
+            <a href="#legal">Legal</a>
+            <a href="#muro-de-honor">Muro de Honor</a>
+        </div>
+    </nav>
+
+    <header class="portada">
+        <div class="contenedor">
+            <div>
+                <p class="etiqueta">Shooter de naves · Phaser 3</p>
+                <h1>NOOB<br><span>SWARM</span></h1>
+                <p class="logline">Un piloto noob, armado con una nave hecha de ladrillos, debe frenar al enjambre de Ladrillos Corruptos antes de que el Rey Ladrillo convierta toda la galaxia en un error 404.</p>
+                <div class="jugar-caja">
+                    <a class="jugar" href="naves/">JUGAR</a>
+                    <p class="nota">Gratis · en tu navegador · teclado o pantalla táctil</p>
+                </div>
+            </div>
+            <img class="captura" src="imagenes/partida.png" width="800" height="600" alt="Captura del juego: una nave roja de ladrillos dispara a una horda de ladrillos rojos con cara de enojados, artilleros verdes y un tanque naranja.">
+        </div>
+    </header>
+
+    <main>
+        <section id="historia">
+            <div class="contenedor">
+                <p class="etiqueta-seccion">El alma del juego</p>
+                <h2>El Gran Deploy del Viernes</h2>
+                <p class="parrafo">La <strong>Baseplate Galáctica</strong> era un universo perfecto, construido ladrillo a ladrillo por el Maestro Brick. Un viernes a las 5:59 de la tarde, el Maestro pulsó <strong>DEPLOY</strong> sin probar nada. «Funciona en mi computadora», dijo.</p>
+                <p class="parrafo">Así nació el <strong>Glitch</strong>, un error que corrompe cada ladrillo y le pinta una cara de enojado. El Maestro quedó atrapado en la infección y se transformó en el <strong>Rey Ladrillo</strong>. La Academia de Pilotos Debug cayó y los veteranos se rindieron, porque querían ganar a la primera.</p>
+                <p class="parrafo">Solo queda un alumno en el hangar: <strong>el Noob</strong>, el peor de su promoción. Tiene una nave de ladrillos y una idea simple: fallar, aprender, mejorar y volver a intentarlo.</p>
+
+                <div class="rejilla">
+                    <article class="ladrillo">
+                        <svg width="64" height="64" viewBox="0 0 16 16" role="img" aria-label="Cara del Noob: un cubo amarillo sonriente"><rect width="16" height="16" fill="#f5cd30"/><rect x=".5" y=".5" width="15" height="15" fill="none" stroke="#111" stroke-width="1"/><rect x="4" y="5" width="2" height="3" fill="#222"/><rect x="10" y="5" width="2" height="3" fill="#222"/><rect x="4" y="11" width="8" height="1" fill="#222"/></svg>
+                        <h3>El Noob</h3>
+                        <p>Piloto novato, optimista y torpe. Cada vez que cae suelta su grito de guerra, «¡OOF!», y vuelve a intentarlo.</p>
+                    </article>
+                    <article class="ladrillo">
+                        <svg width="64" height="64" viewBox="0 0 16 16" role="img" aria-label="Cara de la Capitana Compila: un holograma azul con lentes"><rect width="16" height="16" fill="#4fc3f7"/><rect y="1" width="16" height="1" fill="#b3e5fc" opacity=".6"/><rect y="5" width="16" height="1" fill="#b3e5fc" opacity=".6"/><rect y="9" width="16" height="1" fill="#b3e5fc" opacity=".6"/><rect x="2" y="5" width="5" height="4" fill="#fff"/><rect x="9" y="5" width="5" height="4" fill="#fff"/><rect x="4" y="6" width="2" height="2" fill="#111"/><rect x="11" y="6" width="2" height="2" fill="#111"/><rect x="5" y="12" width="6" height="1" fill="#111"/><rect x=".5" y=".5" width="15" height="15" fill="none" stroke="#111"/></svg>
+                        <h3>Capitana Compila</h3>
+                        <p>Holograma-mentora de la Academia. «Un OOF es un test que falló. Corrige y vuelve a correr.»</p>
+                    </article>
+                    <article class="ladrillo">
+                        <svg width="64" height="64" viewBox="0 0 40 40" role="img" aria-label="La Fábrica Automática, representada por una moneda dorada"><circle cx="20" cy="20" r="19" fill="#b8860b"/><circle cx="20" cy="20" r="15" fill="#f5cd30"/><circle cx="20" cy="20" r="9" fill="#ffe27a"/></svg>
+                        <h3>La Fábrica Automática</h3>
+                        <p>La última máquina de la Academia: convierte las monedas en mejoras y en naves nuevas, sin descanso y sin preguntas.</p>
+                    </article>
+                    <article class="ladrillo">
+                        <svg width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="El Rey Ladrillo: un ladrillo rojo con corona dorada y cara de enojado"><rect x="4" y="18" width="56" height="42" fill="#d32f2f" stroke="#111" stroke-width="3"/><rect x="6" y="4" width="14" height="14" fill="#fdd835" stroke="#111" stroke-width="3"/><rect x="25" y="4" width="14" height="14" fill="#fdd835" stroke="#111" stroke-width="3"/><rect x="44" y="4" width="14" height="14" fill="#fdd835" stroke="#111" stroke-width="3"/><rect x="14" y="30" width="14" height="14" fill="#fff"/><rect x="36" y="30" width="14" height="14" fill="#fff"/><rect x="22" y="34" width="6" height="10" fill="#111"/><rect x="36" y="34" width="6" height="10" fill="#111"/><path d="M11 26 L30 34 M53 26 L34 34" stroke="#111" stroke-width="4"/><rect x="22" y="50" width="20" height="4" fill="#111"/></svg>
+                        <h3>El Rey Ladrillo</h3>
+                        <p>El Maestro Brick corrompido por el Glitch. Cada 5 olas aparece en una versión nueva, desde la 1.0 hasta la v∞.</p>
+                    </article>
+                </div>
+                <p class="cita">«Nadie gana a la primera. Gana quien vuelve a intentarlo con lo aprendido.»<cite>Capitana Compila</cite></p>
+            </div>
+        </section>
+
+        <section id="caracteristicas" class="fondo-alterno">
+            <div class="contenedor">
+                <p class="etiqueta-seccion">Características</p>
+                <h2>Una nave, mil intentos</h2>
+                <div class="rejilla">
+                    <article class="ladrillo"><h3>Naves de ladrillos</h3><p>Seis naves de la Flota Debug, cada una con su historia, su velocidad y su forma de disparar.</p></article>
+                    <article class="ladrillo"><h3>Oleadas y jefes</h3><p>Cuatro tipos de Ladrillos Corruptos y un jefe cada 5 olas, a lo largo de cinco mundos.</p></article>
+                    <article class="ladrillo"><h3>La Fábrica Automática</h3><p>Gasta tus monedas en cinco mejoras (daño, cadencia, vida, velocidad e imán) o en naves nuevas.</p></article>
+                    <article class="ladrillo"><h3>Morir no pierde nada</h3><p>Cuando caes conservas monedas y mejoras. Cada intento te deja más fuerte que el anterior.</p></article>
+                    <article class="ladrillo"><h3>Música y efectos en vivo</h3><p>Todo el sonido se sintetiza en tu navegador y la música gana capas a medida que avanzas.</p></article>
+                    <article class="ladrillo"><h3>Sin instalar nada</h3><p>Funciona en el navegador, con teclado o con la pantalla táctil de tu celular.</p></article>
+                </div>
+                <div class="galeria">
+                    <figure><img src="imagenes/jefe.png" width="800" height="600" loading="lazy" alt="El Rey Ladrillo 1.0, un jefe rojo con corona dorada, con su barra de vida arriba."><figcaption>Cada 5 olas llega el Rey Ladrillo.</figcaption></figure>
+                    <figure><img src="imagenes/fabrica.png" width="800" height="600" loading="lazy" alt="La Fábrica: cinco mejoras con su precio y seis naves de ladrillos para elegir."><figcaption>La Fábrica Automática: mejoras y naves.</figcaption></figure>
+                    <figure><img src="imagenes/personajes.png" width="800" height="600" loading="lazy" alt="Pantalla de personajes dentro del juego: el Noob, la Capitana Compila y la Fábrica Automática."><figcaption>El juego trae su propia enciclopedia (tecla H).</figcaption></figure>
+                </div>
+            </div>
+        </section>
+
+        <section id="como-jugar">
+            <div class="contenedor">
+                <p class="etiqueta-seccion">Cómo jugar</p>
+                <h2>Esquiva y deja que la nave dispare</h2>
+                <div class="tabla-ancha">
+                    <table>
+                        <thead><tr><th scope="col">Acción</th><th scope="col">Teclado</th><th scope="col">Pantalla táctil</th></tr></thead>
+                        <tbody>
+                            <tr><td>Mover</td><td><kbd>←</kbd> <kbd>↑</kbd> <kbd>→</kbd> <kbd>↓</kbd> o <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd></td><td>Arrastrar el dedo</td></tr>
+                            <tr><td>Dash (invulnerable un instante)</td><td><kbd>Espacio</kbd></td><td>Botón DASH</td></tr>
+                            <tr><td>Disparar</td><td colspan="2">Automático: la nave apunta sola al ladrillo más cercano</td></tr>
+                            <tr><td>La Fábrica (tienda)</td><td><kbd>E</kbd> (teclas 1 a 5 compran mejoras)</td><td>Botón $</td></tr>
+                            <tr><td>Historia y personajes</td><td><kbd>H</kbd></td><td>Texto «H» del menú</td></tr>
+                            <tr><td>Silenciar</td><td><kbd>M</kbd></td><td>—</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <section id="enemigos" class="fondo-alterno">
+            <div class="contenedor">
+                <p class="etiqueta-seccion">Los Ladrillos Corruptos</p>
+                <h2>Cada enemigo es un bug</h2>
+                <p class="parrafo">Los enemigos tienen nombre de error real de software. Si los ignoras, se multiplican.</p>
+                <div class="rejilla">
+                    <article class="ladrillo">
+                        <svg width="72" height="72" viewBox="0 0 160 160" role="img" aria-label="Bug Menor: un ladrillo rojo con cara de enojado"><rect x="8" y="8" width="144" height="144" rx="8" fill="#e53935" stroke="#111" stroke-width="6"/><rect x="11" y="124" width="138" height="25" fill="#b71c1c"/><rect x="38" y="62" width="30" height="30" fill="#fff"/><rect x="92" y="62" width="30" height="30" fill="#fff"/><rect x="54" y="68" width="14" height="22" fill="#111"/><rect x="92" y="68" width="14" height="22" fill="#111"/><path d="M30 48 L70 62 M130 48 L90 62" stroke="#111" stroke-width="8" stroke-linecap="round"/><rect x="50" y="104" width="60" height="9" fill="#111"/></svg>
+                        <h3>Bug Menor</h3>
+                        <p>Te persigue a todas partes. Se rompe al tocarte, pero duele.</p>
+                        <p class="real">En software: un defecto pequeño que se ignora hasta que se multiplica.</p>
+                    </article>
+                    <article class="ladrillo">
+                        <svg width="72" height="72" viewBox="0 0 160 160" role="img" aria-label="Condición de Carrera: un ladrillo morado alargado con cara de enojado"><rect x="8" y="30" width="104" height="100" rx="8" fill="#8e24aa" stroke="#111" stroke-width="6"/><rect x="100" y="52" width="52" height="56" rx="6" fill="#ba68c8" stroke="#111" stroke-width="6"/><rect x="24" y="56" width="26" height="26" fill="#fff"/><rect x="62" y="56" width="26" height="26" fill="#fff"/><rect x="38" y="62" width="12" height="18" fill="#111"/><rect x="76" y="62" width="12" height="18" fill="#111"/><path d="M20 46 L52 58 M94 46 L62 58" stroke="#111" stroke-width="7" stroke-linecap="round"/><rect x="36" y="98" width="42" height="8" fill="#111"/></svg>
+                        <h3>Condición de Carrera</h3>
+                        <p>Muy veloz: llega antes de que termines de pensar.</p>
+                        <p class="real">En software: un fallo que depende de quién llega primero.</p>
+                    </article>
+                    <article class="ladrillo">
+                        <svg width="72" height="72" viewBox="0 0 160 160" role="img" aria-label="Spam: un ladrillo verde azulado con un cañón"><rect x="112" y="62" width="42" height="36" rx="5" fill="#37474f" stroke="#111" stroke-width="6"/><rect x="8" y="24" width="108" height="112" rx="8" fill="#00897b" stroke="#111" stroke-width="6"/><rect x="24" y="54" width="26" height="26" fill="#fff"/><rect x="66" y="54" width="26" height="26" fill="#fff"/><rect x="38" y="60" width="12" height="18" fill="#111"/><rect x="80" y="60" width="12" height="18" fill="#111"/><path d="M20 44 L52 56 M96 44 L64 56" stroke="#111" stroke-width="7" stroke-linecap="round"/><rect x="36" y="98" width="46" height="8" fill="#111"/></svg>
+                        <h3>Spam</h3>
+                        <p>Te dispara desde lejos mensajes que nadie pidió.</p>
+                        <p class="real">En software: notificaciones y correos no deseados.</p>
+                    </article>
+                    <article class="ladrillo">
+                        <svg width="72" height="72" viewBox="0 0 160 160" role="img" aria-label="Deuda Técnica: un ladrillo naranja grande con cara de enojado"><rect x="6" y="6" width="148" height="148" rx="8" fill="#fb8c00" stroke="#111" stroke-width="6"/><rect x="9" y="128" width="142" height="23" fill="#e65100"/><circle cx="30" cy="36" r="9" fill="#ffcc80" stroke="#e65100" stroke-width="3"/><circle cx="130" cy="36" r="9" fill="#ffcc80" stroke="#e65100" stroke-width="3"/><rect x="38" y="58" width="34" height="34" fill="#fff"/><rect x="88" y="58" width="34" height="34" fill="#fff"/><rect x="58" y="66" width="14" height="26" fill="#111"/><rect x="88" y="66" width="14" height="26" fill="#111"/><path d="M28 44 L76 60 M132 44 L84 60" stroke="#111" stroke-width="9" stroke-linecap="round"/><rect x="50" y="108" width="60" height="10" fill="#111"/></svg>
+                        <h3>Deuda Técnica</h3>
+                        <p>Parece lento, pero aguanta muchos disparos y cada vez pesa más.</p>
+                        <p class="real">En software: el atajo de hoy se paga con intereses mañana.</p>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <section id="legal">
+            <div class="contenedor">
+                <p class="etiqueta-seccion">Las reglas del mundo real</p>
+                <h2>Legal, con estilo</h2>
+                <div class="clasificacion">
+                    <div class="insignia" role="img" aria-label="Insignia de clasificación creativa: E"><span class="letra">E</span><small>creativa</small></div>
+                    <p><strong>Clasificación E:</strong> apto para cualquier piloto con pulso. Contiene violencia de dibujos animados dirigida exclusivamente a ladrillos con cara de enojados, destellos breves y referencias a desplegar un viernes sin pruebas.</p>
+                </div>
+                <ul class="lista">
+                    <li>La clasificación es humorística: no es de la ESRB ni de PEGI.</li>
+                    <li>NOOB SWARM es un <strong>proyecto estudiantil independiente</strong>. No está afiliado, patrocinado ni respaldado por Roblox Corporation; «Roblox» es una marca de su titular. Solo nos inspira la estética de los juegos de bloques.</li>
+                    <li><strong>Sin anuncios ni compras reales.</strong> Las monedas son ficticias y solo sirven dentro del juego.</li>
+                    <li><strong>Privacidad:</strong> no pedimos datos personales ni hay cuentas. Tu progreso (monedas, mejoras y mejor ola) se guarda únicamente en tu navegador, con localStorage, y no sale de tu dispositivo.</li>
+                    <li>La librería del juego y la tipografía se descargan de jsDelivr y de Google Fonts, que pueden ver tu dirección IP como cualquier sitio web.</li>
+                    <li>El juego tiene destellos y sacudidas de pantalla breves. Puedes silenciar el sonido con la tecla <kbd>M</kbd>.</li>
+                </ul>
+            </div>
+        </section>
+
+        <section id="muro-de-honor" class="fondo-alterno">
+            <div class="contenedor">
+                <p class="etiqueta-seccion">Muro de Honor</p>
+                <h2>Gracias a quienes lo hicieron posible</h2>
+                <div class="tabla-ancha">
+                    <table>
+                        <thead><tr><th scope="col">Recurso</th><th scope="col">Quién</th><th scope="col">Licencia</th><th scope="col">Uso</th></tr></thead>
+                        <tbody>
+                            <tr><td>Phaser 3</td><td>Phaser Studio Inc., Richard Davey y colaboradores</td><td>MIT</td><td>Motor del juego</td></tr>
+                            <tr><td>Fredoka</td><td>Milena Brandão y colaboradores</td><td>SIL Open Font License 1.1</td><td>Tipografía</td></tr>
+                            <tr><td>jsDelivr</td><td>Red de entrega gratuita (CDN)</td><td>Servicio gratuito</td><td>Entrega de Phaser</td></tr>
+                            <tr><td>GitHub Pages</td><td>GitHub</td><td>Servicio gratuito</td><td>Alojamiento de esta página</td></tr>
+                            <tr><td>Arte, efectos y música</td><td>Creados por el equipo, con código</td><td>Propios: no hay archivos de terceros</td><td>Naves, ladrillos, planetas y sonido</td></tr>
+                            <tr><td>Diseño, lore y programación</td><td>Luis Guerrero</td><td>Proyecto estudiantil</td><td>Todo el juego</td></tr>
+                            <tr><td>Asistencia con IA</td><td>Claude (Anthropic)</td><td>—</td><td>Ayuda en programación y redacción</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="contenedor">
+            <p><a href="naves/">Jugar NOOB SWARM</a> · <a href="https://github.com/marcado993/JuegoInteractivo">Código en GitHub</a> · <a href="neon-swarm/">Versión anterior: NEON SWARM</a></p>
+            <p>Proyecto estudiantil hecho con Phaser 3. Sin afiliación con Roblox Corporation.</p>
+        </div>
+    </footer>
 </body>
 </html>

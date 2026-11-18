@@ -1,35 +1,33 @@
-# NEON SWARM
+# NOOB SWARM
 
-Juego de supervivencia arcade hecho con **Phaser 3** (Arcade Physics). Sin assets externos: gráficos, efectos y música (synthwave a 128 BPM que gana capas con cada ola) se generan por código.
+> Un piloto noob, armado con una nave hecha de ladrillos, debe frenar al enjambre de Ladrillos Corruptos antes de que el Rey Ladrillo convierta toda la galaxia en un error 404.
 
-**Jugar:** https://marcado993.github.io/JuegoInteractivo/
+Shooter de naves estilo juegos de bloques, hecho con **Phaser 3**. Proyecto estudiantil.
 
-## Controles
+- **Página del juego:** https://marcado993.github.io/JuegoInteractivo/
+- **Jugar directamente:** https://marcado993.github.io/JuegoInteractivo/naves/
 
-| Acción | Teclado | Táctil |
-|---|---|---|
-| Mover | Flechas / WASD | Arrastrar |
-| Dash (invulnerable) | Espacio | Botón DASH |
-| Disparo | Automático al enemigo más cercano | Automático |
-| Silenciar música y efectos | M | - |
+## Estructura del repositorio
 
-## Cómo se juega
+| Carpeta | Contenido |
+|---|---|
+| `index.html` | Landing page (el escaparate): logline, historia, características, sección legal, Muro de Honor y botón JUGAR |
+| `naves/` | El juego NOOB SWARM (Phaser 3) y su biblia de lore (`LORE.md`) |
+| `neon-swarm/` | Versión anterior del juego (NEON SWARM) |
+| `imagenes/` | Capturas del juego usadas en la landing page |
 
-- Sobrevive a oleadas cada vez más grandes de enemigos (perseguidores, corredores y tanques).
-- Encadena muertes para subir el multiplicador de combo (hasta x8); recibir daño lo reinicia.
-- Recoge los orbes verdes para curarte.
-- El arma mejora cada dos olas (hasta 5 disparos en abanico).
-- El récord se guarda en el navegador (`localStorage`).
+## Lore
 
-## Estructura
-
-- `index.html`: carga Phaser por CDN y el juego.
-- `game.js`: configuración, cámara que sigue al jugador, movimiento, enemigos, oleadas y HUD.
+La historia, los personajes, los cinco mundos y la resonancia ludonarrativa están en [`naves/LORE.md`](naves/LORE.md).
 
 ## Ejecutar en local
-
-Abre `index.html` con la extensión Live Server de VS Code, o con cualquier servidor estático:
 
 ```bash
 python -m http.server 8000
 ```
+
+Luego abre http://localhost:8000/ en el navegador.
+
+## Aviso
+
+Proyecto estudiantil independiente. No está afiliado, patrocinado ni respaldado por Roblox Corporation.
